@@ -191,21 +191,21 @@ const char argp_args_doc[] =
 
 static const struct argp_option argp_options[] = {
 	// name/longopt:str, key/shortopt:int, arg:str, flags:int, doc:str
-	{"pid", 'p', "PID", 0, "process ID to trace. if not specified, trace kernel allocs"},
-	{"trace", 't', 0, 0, "print trace messages for each alloc/free call" },
-	{"show-allocs", 'a', 0, 0, "show allocation addresses and sizes as well as call stacks"},
-	{"older", 'o', "AGE_MS", 0, "prune allocations younger than this age in milliseconds"},
-	{"command", 'c', "COMMAND", 0, "execute and trace the specified command"},
-	{"combined-only", 'C', 0, 0, "show combined allocation statistics only"},
-	{"wa-missing-free", 'F', 0, 0, "workaround to alleviate misjudgments when free is missing"},
-	{"sample-rate", 's', "SAMPLE_RATE", 0, "sample every N-th allocation to decrease the overhead"},
-	{"top", 'T', "TOP_STACKS", 0, "display only this many top allocating stacks (by size)"},
-	{"min-size", 'z', "MIN_SIZE", 0, "capture only allocations larger than this size"},
-	{"max-size", 'Z', "MAX_SIZE", 0, "capture only allocations smaller than this size"},
-	{"obj", 'O', "OBJECT", 0, "attach to allocator functions in the specified object"},
-	{"percpu", 'P', NULL, 0, "trace percpu allocations"},
-	{"symbols-prefix", 'S', "SYMBOLS_PREFIX", 0, "memory allocator symbols prefix"},
-	{"verbose", 'v', NULL, 0, "verbose debug output" },
+	{"pid", 'p', "PID", 0, "process ID to trace. if not specified, trace kernel allocs", 0 },
+	{"trace", 't', 0, 0, "print trace messages for each alloc/free call", 0 },
+	{"show-allocs", 'a', 0, 0, "show allocation addresses and sizes as well as call stacks", 0 },
+	{"older", 'o', "AGE_MS", 0, "prune allocations younger than this age in milliseconds", 0 },
+	{"command", 'c', "COMMAND", 0, "execute and trace the specified command", 0 },
+	{"combined-only", 'C', 0, 0, "show combined allocation statistics only", 0 },
+	{"wa-missing-free", 'F', 0, 0, "workaround to alleviate misjudgments when free is missing", 0 },
+	{"sample-rate", 's', "SAMPLE_RATE", 0, "sample every N-th allocation to decrease the overhead", 0 },
+	{"top", 'T', "TOP_STACKS", 0, "display only this many top allocating stacks (by size)", 0 },
+	{"min-size", 'z', "MIN_SIZE", 0, "capture only allocations larger than this size", 0 },
+	{"max-size", 'Z', "MAX_SIZE", 0, "capture only allocations smaller than this size", 0 },
+	{"obj", 'O', "OBJECT", 0, "attach to allocator functions in the specified object", 0 },
+	{"percpu", 'P', NULL, 0, "trace percpu allocations", 0 },
+	{"symbols-prefix", 'S', "SYMBOLS_PREFIX", 0, "memory allocator symbols prefix", 0 },
+	{"verbose", 'v', NULL, 0, "verbose debug output", 0 },
 	{},
 };
 
@@ -685,7 +685,7 @@ pid_t fork_sync_exec(const char *command, int fd)
 	return pid;
 }
 
-#if USE_BLAZESYM
+#ifdef USE_BLAZESYM
 void print_stack_frame_by_blazesym(size_t frame, uint64_t addr, const blazesym_csym *sym)
 {
 	if (!sym)
@@ -766,14 +766,13 @@ void print_stack_frames_by_syms_cache()
 		if (addr == 0)
 			break;
 
-		char *dso_name;
-		uint64_t dso_offset;
-		const struct sym *sym = syms__map_addr_dso(syms, addr, &dso_name, &dso_offset);
-		if (sym) {
-			printf("\t%zu [<%016lx>] %s+0x%lx", i, addr, sym->name, sym->offset);
-			if (dso_name)
-				printf(" [%s]", dso_name);
-			printf("\n");
+		struct sym_info sinfo;
+		int ret = syms__map_addr_dso(syms, addr, &sinfo);
+		if (ret == 0) {
+			printf("\t%zu [<%016lx>]", i, addr);
+			if (sinfo.sym_name)
+				printf(" %s+0x%lx", sinfo.sym_name, sinfo.sym_offset);
+			printf(" [%s]\n", sinfo.dso_name);
 		} else {
 			printf("\t%zu [<%016lx>] <%s>\n", i, addr, "null sym");
 		}
